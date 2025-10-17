@@ -1,1 +1,0 @@
-# Client React\n\n```bash\ncd client\nnpm install\nnpm run dev\n```

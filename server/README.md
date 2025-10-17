@@ -1,1 +1,0 @@
-# Server\n\n```bash\ncd server\nnpm install\nnpm run dev\n```

@@ -1,0 +1,12 @@
+{
+  "name": "teambuilding-monorepo",
+  "private": true,
+  "scripts": {
+    "dev:server": "node server/server.js",
+    "dev:client": "npm --prefix client run dev",
+    "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
+    "build": "npm --prefix client run build",
+    "start": "NODE_ENV=production node server/server.js"
+  },
+  "devDependencies": { "concurrently": "^9.0.0" }
+}

@@ -5,10 +5,12 @@ import autoprefixer from 'autoprefixer'
 
 export default defineConfig({
   plugins: [react()],
-  server: { port: 5173 },
-  css: {
-    postcss: {
-      plugins: [tailwindcss(), autoprefixer()],
-    },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:5228',
+      '/ws': { target: 'ws://localhost:5228', ws: true }
+    }
   },
+  css: { postcss: { plugins: [tailwindcss(), autoprefixer()] } }
 })
