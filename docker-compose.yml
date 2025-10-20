@@ -1,0 +1,122 @@
+services:
+  # Traefik reverse proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Traefik dashboard
+    command:
+      # Enable Docker provider
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      
+      # Define entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      
+      # Enable dashboard
+      - --api.dashboard=true
+      - --api.insecure=true
+      
+      # Enable access logs
+      - --accesslog=true
+      
+      # SSL configuration (auto redirect to HTTPS)
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      
+      # Let's Encrypt (uncomment for production with real domain)
+      # - --certificatesresolvers.letsencrypt.acme.email=your-email@example.com
+      # - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      # - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-ssl-certs:/ssl-certs
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+    networks:
+      - teambuilding-network
+
+  # Backend service
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: teambuilding-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=5228
+    labels:
+      - "traefik.enable=true"
+      
+      # HTTP router
+      - "traefik.http.routers.backend.rule=Host(`api.localhost`) || (Host(`localhost`) && PathPrefix(`/api`))"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.service=backend"
+      
+      # WebSocket router for /ws endpoint
+      - "traefik.http.routers.backend-ws.rule=Host(`localhost`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.backend-ws.entrypoints=web"
+      - "traefik.http.routers.backend-ws.service=backend"
+      
+      # Service definition
+      - "traefik.http.services.backend.loadbalancer.server.port=5228"
+      
+      # CORS headers for API
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE"
+      - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.cors.headers.addvaryheader=true"
+      - "traefik.http.routers.backend.middlewares=cors"
+    networks:
+      - teambuilding-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5228/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: teambuilding-frontend
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      
+      # Main frontend router
+      - "traefik.http.routers.frontend.rule=Host(`localhost`) && !PathPrefix(`/api`) && !PathPrefix(`/ws`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.service=frontend"
+      
+      # Service definition
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+      - "traefik.http.routers.frontend.middlewares=security-headers"
+    networks:
+      - teambuilding-network
+    depends_on:
+      backend:
+        condition: service_healthy
+
+networks:
+  teambuilding-network:
+    driver: bridge
+
+volumes:
+  traefik-ssl-certs:
+    driver: local
