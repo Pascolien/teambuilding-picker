@@ -23,7 +23,7 @@ let activities=[
   { id:nanoid(), title:'Laser Game', url:'https://grenoble.sevensquares.fr/laser-game-grenoble/', description:'Laser Game à grenoble' , tags:['Indoor','Team'], votes:0 },
   { id:nanoid(), title:'Bowling', url:'https://grenoble.sevensquares.fr/bowling-grenoble/', description:'Un bowling interactif unique à Grenoble !' , tags:['Indoor','fun'], votes:0 }, 
   { id:nanoid(), title:'Billard', url:'https://grenoble.sevensquares.fr/billard-grenoble/', description:'Profitez d’un espace dédié au billard à Grenoble !' , tags:['Indoor','fun'], votes:0 },
-  { id:nanoid(), title:'Defi Pirate', url:'https://grenoble.sevensquares.fr/billard-grenoble/', description:'Profitez d’un espace dédié au billard à Grenoble !' , tags:['Indoor','fun'], votes:0 },
+  { id:nanoid(), title:'Defi Pirate', url:'https://www.defis-pirate.com/accueil.html', description:'Plongés dans une ambiance Pirate et en équipe de 2 à 5 joueurs, entrez dans un labyrinthe de 800m2 et relevez tous ensemble 11 épreuves de réflexion, d’adresse et de sport.' , tags:['Indoor','fun'], votes:0 },
 ]
 
 app.get('/api/health', (_, res) => res.json({ ok: true }))

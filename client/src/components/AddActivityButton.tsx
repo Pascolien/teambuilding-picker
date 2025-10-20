@@ -1,37 +1,38 @@
 // client/src/components/AddActivityButton.tsx
-import React, { useState } from 'react'
-import type { Activity } from '../types'
-import { Plus, Link as LinkIcon } from 'lucide-react'
+import React, { useState } from "react";
+import type { Activity } from "../types";
+import { Plus, Link as LinkIcon } from "lucide-react";
 
 export function AddActivityButton({
   onAdd,
 }: {
-  onAdd: (a: Omit<Activity, 'id' | 'votes'>) => void
+  onAdd: (a: Omit<Activity, "id" | "votes">) => void;
 }) {
-  const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState('')
-  const [url, setUrl] = useState('')
-  const [description, setDescription] = useState('')
-  const [tags, setTags] = useState('')
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
 
   function submit() {
-    if (!title.trim() || !url.trim()) return alert('Titre et lien sont requis.')
+    if (!title.trim() || !url.trim())
+      return alert("Titre et lien sont requis.");
     try {
-      new URL(url)
+      new URL(url);
     } catch {
-      return alert('Lien invalide.')
+      return alert("Lien invalide.");
     }
     onAdd({
       title: title.trim(),
       url: url.trim(),
       description: description.trim() || undefined,
       tags: tagsFrom(tags),
-    })
-    setTitle('')
-    setUrl('')
-    setDescription('')
-    setTags('')
-    setOpen(false)
+    });
+    setTitle("");
+    setUrl("");
+    setDescription("");
+    setTags("");
+    setOpen(false);
   }
 
   return (
@@ -108,10 +109,16 @@ export function AddActivityButton({
             </div>
 
             <div className="p-4 flex gap-2 justify-end">
-              <button className="px-3 py-2 rounded border" onClick={() => setOpen(false)}>
+              <button
+                className="px-3 py-2 rounded border"
+                onClick={() => setOpen(false)}
+              >
                 Annuler
               </button>
-              <button className="px-3 py-2 rounded bg-emerald-600 text-white" onClick={submit}>
+              <button
+                className="px-3 py-2 rounded bg-emerald-600 text-white"
+                onClick={submit}
+              >
                 Ajouter
               </button>
             </div>
@@ -119,20 +126,23 @@ export function AddActivityButton({
         </div>
       )}
     </>
-  )
+  );
 }
 
 /** Helpers locaux (évite l’erreur « introuvable ») */
 function tagsFrom(raw: string): string[] | undefined {
-  const arr = raw.split(',').map((s) => s.trim()).filter(Boolean)
-  return arr.length ? arr : undefined
+  const arr = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return arr.length ? arr : undefined;
 }
 function safeURL(u: string) {
   try {
-    return new URL(u).toString()
+    return new URL(u).toString();
   } catch {
-    return 'about:blank'
+    return "about:blank";
   }
 }
 
-export default AddActivityButton
+export default AddActivityButton;
