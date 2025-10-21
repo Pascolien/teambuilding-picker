@@ -28,17 +28,19 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       
-      # Let's Encrypt (uncomment for production with real domain)
-      # - --certificatesresolvers.letsencrypt.acme.email=your-email@example.com
-      # - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
-      # - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # Let's Encrypt configuration
+      - --certificatesresolvers.letsencrypt.acme.email=your-email@valmzn.ch
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-ssl-certs:/ssl-certs
+      - ./acme.json:/acme.json
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
-      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik-picker.valmzn.ch`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
     networks:
       - teambuilding-network
 
@@ -56,14 +58,16 @@ services:
       - "traefik.enable=true"
       
       # HTTP router
-      - "traefik.http.routers.backend.rule=Host(`api.localhost`) || (Host(`localhost`) && PathPrefix(`/api`))"
-      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.routers.backend.rule=Host(`api-picker.valmzn.ch`) || (Host(`picker.valmzn.ch`) && PathPrefix(`/api`))"
+      - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.service=backend"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       
       # WebSocket router for /ws endpoint
-      - "traefik.http.routers.backend-ws.rule=Host(`localhost`) && PathPrefix(`/ws`)"
-      - "traefik.http.routers.backend-ws.entrypoints=web"
+      - "traefik.http.routers.backend-ws.rule=Host(`picker.valmzn.ch`) && PathPrefix(`/ws`)"
+      - "traefik.http.routers.backend-ws.entrypoints=websecure"
       - "traefik.http.routers.backend-ws.service=backend"
+      - "traefik.http.routers.backend-ws.tls.certresolver=letsencrypt"
       
       # Service definition
       - "traefik.http.services.backend.loadbalancer.server.port=5228"
@@ -94,9 +98,10 @@ services:
       - "traefik.enable=true"
       
       # Main frontend router
-      - "traefik.http.routers.frontend.rule=Host(`localhost`) && !PathPrefix(`/api`) && !PathPrefix(`/ws`)"
-      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.routers.frontend.rule=Host(`picker.valmzn.ch`) && !PathPrefix(`/api`) && !PathPrefix(`/ws`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.service=frontend"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
       
       # Service definition
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
