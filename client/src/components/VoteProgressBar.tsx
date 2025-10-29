@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useMemo } from "react"
 import type { Activity } from "../types"
 
 const COLORS = [
@@ -7,33 +7,47 @@ const COLORS = [
 ]
 
 export default function VoteProgressBar({ items }: { items: Activity[] }) {
-  const totals = items.map(a => a.votes_count ?? 0)
+  // ordre stable pour éviter que les couleurs ne changent à chaque update
+  const stable = useMemo(
+    () => [...items].sort((a, b) => a.id.localeCompare(b.id)),
+    [items]
+  )
+
+  const totals = stable.map(a => a.votes_count ?? 0)
   const total = totals.reduce((s, n) => s + n, 0)
 
-  if (items.length === 0) return null
+  if (stable.length === 0) return null
 
   return (
     <div className="space-y-2">
-      <div className="w-full h-4 rounded bg-slate-200 overflow-hidden" role="img" aria-label={`Répartition des ${total} votes`}>
-        {items.map((a, idx) => {
+      <div
+        className="w-full h-4 rounded bg-slate-200 overflow-hidden"
+        role="img"
+        aria-label={`Répartition des ${total} votes`}
+      >
+        {stable.map((a, idx) => {
           const v = a.votes_count ?? 0
           const pct = total > 0 ? (v / total) * 100 : 0
-          if (pct === 0) return null
+          if (pct <= 0) return null
           return (
             <div
               key={a.id}
               className={`${COLORS[idx % COLORS.length]} h-full transition-all`}
-              style={{ width: `${pct}%` }}
+              style={{
+                // petite largeur mini pour visibilité
+                width: `${Math.max(pct, 0.8)}%`,
+              }}
               title={`${a.title}: ${v} vote${v > 1 ? "s" : ""} (${pct.toFixed(1)}%)`}
             />
           )
         })}
       </div>
+
       <div className="flex flex-wrap gap-2 text-sm">
         <span className="text-slate-600">
           Total: <strong>{total}</strong> vote{total > 1 ? "s" : ""}
         </span>
-        {items.map((a, idx) => {
+        {stable.map((a, idx) => {
           const v = a.votes_count ?? 0
           const pct = total > 0 ? (v / total) * 100 : 0
           return (
