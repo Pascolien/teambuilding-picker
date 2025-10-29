@@ -9,7 +9,7 @@ export default function App() {
         <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-3">
             <Trophy className="w-6 h-6" />
-            <h1 className="text-2xl font-bold">Team Building – Mono</h1>
+            <h1 className="text-2xl font-bold">Team Building R&D Qoia</h1>
           </Link>
           <nav className="flex items-center gap-2 text-sm">
             <Link
