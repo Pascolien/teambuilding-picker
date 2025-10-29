@@ -1,47 +1,43 @@
-import React from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
-import { Trophy, Share2, Radio } from "lucide-react";
+// src/App.tsx
+import React from "react"
+import { Outlet, NavLink } from "react-router-dom"
+
 export default function App() {
-  const loc = useLocation();
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-10 backdrop-blur bg-white/80 border-b">
-        <div className="mx-auto max-w-6xl px-4 py-4 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3">
-            <Trophy className="w-6 h-6" />
-            <h1 className="text-2xl font-bold">Team Building R&D Qoia</h1>
-          </Link>
-          <nav className="flex items-center gap-2 text-sm">
-            <Link
-              className={`px-3 py-1 rounded ${
-                loc.pathname === "/"
-                  ? "bg-slate-900 text-white"
-                  : "hover:bg-slate-100"
-              }`}
+    <div className="min-h-screen bg-slate-50">
+      <header className="border-b bg-white">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🏆</span>
+            <h1 className="text-lg sm:text-xl font-semibold">
+              Team Building – <span className="text-slate-700">R&amp;D Qoia</span>
+            </h1>
+          </div>
+          <nav className="flex items-center gap-2">
+            <NavLink
               to="/"
+              end
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded ${isActive ? "bg-slate-900 text-white" : "border bg-white hover:bg-slate-50"}`
+              }
             >
               Sondage
-            </Link>
-            <Link
-              className={`px-3 py-1 rounded ${
-                loc.pathname.startsWith("/results")
-                  ? "bg-slate-900 text-white"
-                  : "hover:bg-slate-100"
-              }`}
+            </NavLink>
+            <NavLink
               to="/results"
+              className={({ isActive }) =>
+                `px-3 py-1.5 rounded ${isActive ? "bg-slate-900 text-white" : "border bg-white hover:bg-slate-50"}`
+              }
             >
-              <Share2 className="inline w-4 h-4 mr-1" /> Résultats
-            </Link>
+              Résultats
+            </NavLink>
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
+
+      <main className="max-w-6xl mx-auto px-4 py-6">
         <Outlet />
       </main>
-      <footer className="mx-auto max-w-6xl px-4 py-10 text-center text-xs text-slate-500">
-        <Radio className="inline w-4 h-4 mr-1" /> Node • WebSocket • React •
-        Tailwind
-      </footer>
     </div>
-  );
+  )
 }
