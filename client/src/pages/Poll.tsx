@@ -21,33 +21,33 @@ export default function Poll() {
   const [q, setQ] = useState("")
   const [wsStatus, setWsStatus] = useState<"connecting" | "connected">("connecting")
 
-  // id client anonyme (persisté par navigateur)
+  // id client anonyme persistant
   const [clientId] = useState(() => {
-    const k = "tb_client_id"
-    const v = localStorage.getItem(k)
+    const key = "tb_client_id"
+    const v = localStorage.getItem(key)
     if (v) return v
-    const n = nanoid()
-    localStorage.setItem(k, n)
-    return n
+    const id = nanoid()
+    localStorage.setItem(key, id)
+    return id
   })
 
-  // multi-choix : identifiants des activités sélectionnées par CE client
+  // ensemble des votes de CE client
   const [myVotes, setMyVotes] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let alive = true
 
     ;(async () => {
-      // 1) chargement initial
+      // 1️⃣ Charger la liste initiale
       const list = (await listActivities()) as Row[]
       if (!alive) return
       setActivities(list)
 
-      // 2) mes votes
+      // 2️⃣ Récupérer mes votes
       const mine = await listMyVotes(clientId)
       if (alive) setMyVotes(new Set(mine))
 
-      // 3) realtime activities (INSERT/UPDATE/DELETE)
+      // 3️⃣ Écouter les changements temps réel sur activities
       const chA = supabase
         .channel("realtime:activities")
         .on(
@@ -67,7 +67,7 @@ export default function Poll() {
         )
         .subscribe()
 
-      // 4) realtime sur MES votes (pour surligner “Mon choix” en live)
+      // 4️⃣ Écouter MES votes pour mise à jour locale
       const chV = supabase
         .channel("realtime:votes:mine")
         .on(
@@ -92,7 +92,7 @@ export default function Poll() {
         )
         .subscribe()
 
-      // 5) filet de sécurité : si votes changent, on recharge la liste
+      // 5️⃣ Rafraîchir automatiquement les compteurs de votes
       const chVotesBump = supabase
         .channel("realtime:votes:bump")
         .on(
@@ -118,16 +118,20 @@ export default function Poll() {
     }
   }, [clientId])
 
-  // recherche
+  // 🔍 Recherche filtrée
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase()
     if (!query) return activities
     return activities.filter((a) =>
-      [a.title, a.description, a.tags?.join(" ")].filter(Boolean).join(" ").toLowerCase().includes(query)
+      [a.title, a.description, a.tags?.join(" ")]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
     )
   }, [activities, q])
 
-  // leader
+  // 🏆 Calcul des leaders
   const leader = useMemo(() => {
     if (!activities.length) return null
     const max = Math.max(...activities.map((a) => a.votes_count ?? 0))
@@ -136,9 +140,9 @@ export default function Poll() {
     return { max, top }
   }, [activities])
 
-  // toggle multi-choix
+  // 🗳️ Voter / Retirer un vote
   async function onToggle(id: string) {
-    const selected = myVotes.has(id) // true => déjà voté => DELETE
+    const selected = myVotes.has(id)
     await toggleVote(id, clientId, selected)
     setMyVotes((prev) => {
       const copy = new Set(prev)
@@ -148,25 +152,27 @@ export default function Poll() {
     })
   }
 
+  // 🗑️ Supprimer une activité
   async function removeActivity(id: string) {
     try {
-      await deleteActivity(id) // RLS: policy DELETE sur activities requise
-      // UI mise à jour par Realtime (DELETE activities)
+      await deleteActivity(id)
     } catch (e) {
       console.error(e)
       alert("Suppression impossible.")
     }
   }
 
+  // ➕ Ajouter une activité
   async function addActivity(input: Omit<Activity, "id" | "votes_count" | "created_at">) {
     try {
-      await apiAdd(input) // UI mise à jour par Realtime (INSERT activities)
+      await apiAdd(input)
     } catch (e) {
       console.error(e)
       alert("Ajout impossible.")
     }
   }
 
+  // 🔄 Réinitialiser mes votes
   async function resetMyVotes() {
     const ids = Array.from(myVotes)
     await Promise.all(ids.map((id) => toggleVote(id, clientId, true)))
@@ -174,40 +180,40 @@ export default function Poll() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Bandeau état temps réel + actions hautes */}
-      <div className="flex flex-col md:flex-row md:items-center gap-3">
-        <span className="px-2 py-1 rounded text-xs bg-slate-100">
-          {wsStatus === "connected" ? "Temps réel actif" : "Connexion..."}
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 space-y-6">
+      {/* 🔌 Barre d’état + recherche + actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
+        <span className="px-2 py-1 rounded text-xs bg-slate-100 self-start sm:self-auto">
+          {wsStatus === "connected" ? "✅ Temps réel actif" : "⏳ Connexion..."}
         </span>
 
-        <div className="flex-1" />
-
-        <input
-          className="w-full md:w-96 px-3 py-2 rounded border"
-          placeholder="Rechercher (titre, tags, description)"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <AddActivityButton onAdd={addActivity} />
-        <button
-          onClick={resetMyVotes}
-          className="px-3 py-2 rounded border bg-white hover:bg-slate-50 flex items-center gap-2"
-        >
-          <RefreshCw className="w-4 h-4" /> Retirer tous mes votes
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          <input
+            className="flex-1 px-3 py-2 rounded border text-sm"
+            placeholder="Rechercher une activité..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <AddActivityButton onAdd={addActivity} />
+          <button
+            onClick={resetMyVotes}
+            className="px-3 py-2 rounded border bg-white hover:bg-slate-50 flex items-center gap-2 text-sm"
+          >
+            <RefreshCw className="w-4 h-4" /> Retirer mes votes
+          </button>
+        </div>
       </div>
 
-      {/* Répartition en temps réel (barre empilée + légende) */}
+      {/* 📊 Barre de progression temps réel */}
       <VoteProgressBar items={activities} />
 
-      {/* En tête (pills) */}
+      {/* 🥇 En-tête : activités leaders */}
       {leader && (
-        <div className="p-4 rounded border bg-amber-50 border-amber-200">
-          <div className="font-semibold mb-2">En tête :</div>
+        <div className="p-3 sm:p-4 rounded border bg-amber-50 border-amber-200">
+          <div className="font-semibold mb-2 text-sm sm:text-base">En tête :</div>
           <div className="flex flex-wrap gap-2">
             {leader.top.map((a) => (
-              <span key={a.id} className="px-2 py-1 rounded bg-white border text-sm">
+              <span key={a.id} className="px-2 py-1 rounded bg-white border text-xs sm:text-sm">
                 {a.title} — {(a.votes_count ?? 0)} votes
               </span>
             ))}
@@ -215,52 +221,53 @@ export default function Poll() {
         </div>
       )}
 
-      {/* Grille d’activités */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* 🧩 Grille responsive d’activités */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((a) => {
           const selected = myVotes.has(a.id)
           return (
-            <div key={a.id} className="relative h-full rounded border bg-white">
-              {/* Badge compact en haut-droite */}
-              <div className="absolute top-2 right-3 text-xs">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border">
-                  {(a.votes_count ?? 0)} <span aria-hidden>🗳️</span>
+            <div key={a.id} className="relative h-full rounded border bg-white shadow-sm hover:shadow-md transition">
+              {/* Badge compteur */}
+              <div className="absolute top-2 right-3 text-[11px] sm:text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 border">
+                  {(a.votes_count ?? 0)} 🗳️
                 </span>
               </div>
 
-              <div className="p-4 flex items-start justify-between gap-3">
-                <div className="text-lg font-semibold leading-tight">{a.title}</div>
-              </div>
+              <div className="p-3 sm:p-4">
+                <div className="text-base sm:text-lg font-semibold mb-2">{a.title}</div>
+                {a.description && (
+                  <p className="text-sm text-slate-700 line-clamp-3">{a.description}</p>
+                )}
 
-              <div className="px-4 pb-4 space-y-4">
-                {a.description && <p className="text-sm text-slate-700">{a.description}</p>}
-
-                {a.tags && a.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
+                {Array.isArray(a.tags) && a.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
                     {a.tags.map((t, i) => (
-                      <span key={i} className="px-2 py-0.5 rounded border text-xs bg-slate-50">
+                      <span
+                        key={i}
+                        className="px-2 py-0.5 rounded border text-[11px] sm:text-xs bg-slate-50"
+                      >
                         {t}
                       </span>
                     ))}
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
                   <a
-                    className="flex-1 px-3 py-2 rounded border bg-white hover:bg-slate-50 flex items-center gap-2"
+                    className="flex-1 px-3 py-2 rounded border bg-white hover:bg-slate-50 flex items-center justify-center sm:justify-start gap-2 text-sm"
                     href={a.url}
                     target="_blank"
                     rel="noreferrer"
                   >
-                    <ExternalLink className="w-4 h-4" /> Voir l'activité
+                    <ExternalLink className="w-4 h-4" /> Voir
                   </a>
 
                   <button
                     onClick={() => onToggle(a.id)}
-                    className={`px-3 py-2 rounded border ${
+                    className={`px-3 py-2 rounded border text-sm ${
                       selected ? "bg-emerald-600 text-white border-emerald-600" : "bg-white hover:bg-slate-50"
                     }`}
-                    title={selected ? "Retirer mon vote" : "Ajouter mon vote"}
                   >
                     {selected ? (
                       <span className="flex items-center gap-2">
@@ -273,8 +280,8 @@ export default function Poll() {
 
                   <button
                     onClick={() => removeActivity(a.id)}
-                    className="px-2 py-2 rounded hover:bg-red-50"
-                    title="Supprimer (DB)"
+                    className="px-3 py-2 rounded border text-sm hover:bg-red-50"
+                    title="Supprimer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -286,7 +293,9 @@ export default function Poll() {
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center text-slate-500 mt-12">Aucune activité ne correspond à la recherche.</p>
+        <p className="text-center text-slate-500 mt-12 text-sm">
+          Aucune activité ne correspond à la recherche.
+        </p>
       )}
     </div>
   )

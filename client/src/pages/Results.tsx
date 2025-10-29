@@ -3,6 +3,7 @@ import type { Activity } from "../types"
 import { listActivities } from "../lib/apiSupabase"
 import { supabase } from "../lib/supabase"
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
+import VoteProgressBar from "../components/VoteProgressBar"
 
 export default function Results() {
   const [activities, setActivities] = useState<Activity[] | null>(null)
@@ -11,11 +12,9 @@ export default function Results() {
     let alive = true
 
     async function init() {
-      // 1️⃣ Charger la liste initiale
       const data = await listActivities()
       if (alive) setActivities(data)
 
-      // 2️⃣ Écouter les mises à jour temps réel
       const channel = supabase
         .channel("realtime:activities:results")
         .on(
@@ -28,10 +27,8 @@ export default function Results() {
               if (!row) return prev
 
               if (payload.eventType === "INSERT") return [...prev, row]
-              if (payload.eventType === "UPDATE")
-                return prev.map((a) => (a.id === row.id ? row : a))
-              if (payload.eventType === "DELETE")
-                return prev.filter((a) => a.id !== row.id)
+              if (payload.eventType === "UPDATE") return prev.map((a) => (a.id === row.id ? row : a))
+              if (payload.eventType === "DELETE") return prev.filter((a) => a.id !== row.id)
               return prev
             })
           }
@@ -48,46 +45,33 @@ export default function Results() {
   }, [])
 
   if (!activities)
-    return (
-      <p className="text-center text-slate-600">
-        Chargement des résultats en direct…
-      </p>
-    )
+    return <p className="text-center text-slate-600">Chargement des résultats en direct…</p>
 
-  // 🧮 Tri du plus voté au moins voté
-  const sorted = [...activities].sort(
-    (a, b) => (b.votes_count ?? 0) - (a.votes_count ?? 0)
-  )
-  const totalVotes = sorted.reduce(
-    (acc, a) => acc + (a.votes_count ?? 0),
-    0
-  )
+  const sorted = [...activities].sort((a, b) => (b.votes_count ?? 0) - (a.votes_count ?? 0))
+  const totalVotes = sorted.reduce((acc, a) => acc + (a.votes_count ?? 0), 0)
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h2 className="text-xl font-semibold mb-1">Résultats (temps réel)</h2>
-      <p className="text-sm text-slate-600 mb-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4">
+      <h2 className="text-lg sm:text-xl font-semibold mb-1">Résultats (temps réel)</h2>
+      <p className="text-xs sm:text-sm text-slate-600 mb-6">
         {totalVotes} vote{totalVotes > 1 ? "s" : ""}
       </p>
 
-      <ol className="space-y-3">
+      <VoteProgressBar items={sorted} />
+
+      <ol className="space-y-2 sm:space-y-3 mt-6">
         {sorted.map((a, idx) => (
-          <li key={a.id} className="rounded border bg-white p-4">
-            <div className="flex items-start justify-between gap-3">
+          <li key={a.id} className="rounded border bg-white p-3 sm:p-4 hover:shadow transition">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
-                <div className="font-semibold">
+                <div className="font-semibold text-base sm:text-lg">
                   {idx + 1}. {a.title}
                 </div>
-                {a.description && (
-                  <p className="text-sm text-slate-700">{a.description}</p>
-                )}
+                {a.description && <p className="text-sm text-slate-700 line-clamp-3">{a.description}</p>}
                 {a.tags && a.tags.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
                     {a.tags.map((t, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 rounded border text-xs bg-slate-50"
-                      >
+                      <span key={i} className="px-2 py-0.5 rounded border text-[11px] sm:text-xs bg-slate-50">
                         {t}
                       </span>
                     ))}
@@ -96,18 +80,15 @@ export default function Results() {
               </div>
 
               <div className="shrink-0 text-right">
-                <div className="text-2xl font-bold">{a.votes_count ?? 0}</div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xl sm:text-2xl font-bold">{a.votes_count ?? 0}</div>
+                <div className="text-[11px] sm:text-xs text-slate-500">
                   vote{(a.votes_count ?? 0) > 1 ? "s" : ""}
                 </div>
-                <a
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm underline"
-                >
-                  voir
-                </a>
+                {a.url && (
+                  <a href={a.url} target="_blank" rel="noreferrer" className="text-[12px] sm:text-sm underline">
+                    voir
+                  </a>
+                )}
               </div>
             </div>
           </li>
